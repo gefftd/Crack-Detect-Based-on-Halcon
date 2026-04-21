@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hdevelop file_version="1.2" halcon_version="24.11.2.0">
+<procedure name="main">
+<interface/>
+<body>
+<c>* crack detect loop</c>
+<l>dev_close_window()</l>
+<c>* 1. Load Images</c>
+<l>list_files('./CrackForest-dataset-master/image','files',ImageFiles)</l>
+<l>list_files('./CrackForest-dataset-master/GT_image','files',GTfiles)</l>
+<c></c>
+<l>tuple_length(GTfiles,N)</l>
+<l>F1_list:=gen_tuple_const(N,0)</l>
+<l>IoU_list:=gen_tuple_const(N,0)</l>
+<c></c>
+<l>for i:=0 to N-1 by 1</l>
+<c></c>
+<l>ImagePath:=ImageFiles[i]</l>
+<l>GTPath:=GTfiles[i]</l>
+<c></c>
+<l>read_image(Image,ImagePath)</l>
+<l>read_image(GT,GTPath)</l>
+<c></c>
+<c>* 2. image to gray</c>
+<l>rgb1_to_gray(Image, Gray)</l>
+<c></c>
+<c>* 3.canny</c>
+<l>edges_sub_pix(Gray,Edge,'canny',1.0,20,40)</l>
+<c>* 4.transfor lines to regions</c>
+<l>gen_region_contour_xld(Edge,Region,'filled')</l>
+<c>* 5. connect regions</c>
+<l>connection(Region,ConnectedRegions)</l>
+<c>* 6.select connectedregions which has pixels in range</c>
+<l>select_shape(ConnectedRegions, Selected, 'area', 'and', 30, 99999)</l>
+<l>union1(Selected,Result)</l>
+<c></c>
+<c></c>
+<l>threshold(GT,GTgray,128,255)</l>
+<c>*7.IoU  score</c>
+<l>intersection(Result,GTgray,Inter)</l>
+<l>area_center(Inter,AreaI,_,_)</l>
+<l>union2(Result,GTgray,Union)</l>
+<l>area_center(Union,AreaU,_,_)</l>
+<l>if (AreaI = [])</l>
+<l>    IoU[i]:= 0</l>
+<l>    F1[i]:=0</l>
+<l>    continue</l>
+<l>endif</l>
+<l>if (AreaU&gt;0)</l>
+<l>                      IoU:=AreaI*1.0/AreaU</l>
+<l>else</l>
+<l>                       IoU:=0 </l>
+<l>endif</l>
+<l>IoU_list[i]:=IoU</l>
+<c>*8.F1-score</c>
+<l>area_center(Result,Pred,_,_)</l>
+<l>area_center(GTgray,GTtotal,_,_)</l>
+<l>area_center(Inter,TP,_,_)</l>
+<c></c>
+<l>Precision:=TP*1.0/Pred</l>
+<l>Recall:=TP*1.0/GTtotal</l>
+<l>if(Precision+Recall&gt;0)</l>
+<l>                        F1:=2*Precision*Recall/(Precision+Recall)        </l>
+<l>else</l>
+<l>                       F1:=0</l>
+<l>endif</l>
+<l>F1_list[i]:=F1</l>
+<l>endfor</l>
+<c></c>
+</body>
+<docu id="main">
+<parameters/>
+</docu>
+</procedure>
+</hdevelop>
