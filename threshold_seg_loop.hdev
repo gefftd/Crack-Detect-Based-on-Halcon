@@ -3,8 +3,8 @@
 <procedure name="main">
 <interface/>
 <body>
-<c>* crack detect loop</c>
-<l>dev_close_window()</l>
+<c>*Threshold Segmentation for Crack Detection</c>
+<l>dev_clear_window()</l>
 <c>* 1. Load Images</c>
 <l>list_files('./CrackForest-dataset-master/image','files',ImageFiles)</l>
 <l>list_files('./CrackForest-dataset-master/GT_image','files',GTfiles)</l>
@@ -21,22 +21,38 @@
 <l>read_image(Image,ImagePath)</l>
 <l>read_image(GT,GTPath)</l>
 <c></c>
-<c>* 2. image to gray</c>
-<l>rgb1_to_gray(Image, Gray)</l>
 <c></c>
-<c>* 3.canny</c>
-<l>edges_sub_pix(Gray,Edge,'canny',1.0,20,40)</l>
-<c>* 4.transfor lines to regions</c>
-<l>gen_region_contour_xld(Edge,Region,'filled')</l>
-<c>* 5. connect regions</c>
-<l>connection(Region,ConnectedRegions)</l>
-<c>* 6.select connectedregions which has pixels in range</c>
-<l>select_shape(ConnectedRegions, Selected, 'area', 'and', 30, 99999)</l>
-<l>union1(Selected,Result)</l>
+<l>rgb1_to_gray(Image,Gray)</l>
+<c>* noise filter</c>
+<l>mean_image(Gray,Gray,3,3)</l>
+<c></c>
+<c>*bottom hat</c>
+<l>Size:=15</l>
+<l>gray_dilation_shape(Gray,dilation_image,Size,Size,'rectangle')</l>
+<c></c>
+<l>gray_erosion_shape(dilation_image,closing_image,Size,Size,'rectangle')</l>
+<c></c>
+<l>sub_image(closing_image,Gray,BottomHat,1,0)</l>
+<c></c>
+<l>gray_histo(BottomHat,BottomHat,AbsoluteHisto,RelativeHisto)</l>
+<c></c>
+<l>scale_image_max(BottomHat,ImageScaled)</l>
 <c></c>
 <c></c>
+<c>*threshold segmentation</c>
+<l>threshold(ImageScaled,RegionGray,60,255)</l>
+<l>reduce_domain(ImageScaled,RegionGray,ImageReduced)</l>
+<l>binary_threshold(ImageReduced, Region, 'max_separability', 'light', UsedThreshold)</l>
+<l>closing_circle(Region,RegionClosed, 2)</l>
+<c></c>
+<c>*connection and select</c>
+<l>connection(RegionClosed,sRegion)</l>
+<l>select_shape(sRegion,RegionArea,'area','and',40, 99999)</l>
+<l>select_shape(RegionArea,LineRegion,'anisometry','and',2,99999)</l>
+<c></c>
+<l>union1(LineRegion,Result)</l>
 <l>threshold(GT,GTgray,128,255)</l>
-<c>*7.IoU  score</c>
+<c>*IoU  score</c>
 <l>intersection(Result,GTgray,Inter)</l>
 <l>area_center(Inter,AreaI,_,_)</l>
 <l>union2(Result,GTgray,Union)</l>
@@ -52,7 +68,7 @@
 <l>                       IoU:=0 </l>
 <l>endif</l>
 <l>IoU_list[i]:=IoU</l>
-<c>*8.F1-score</c>
+<c>*F1-score</c>
 <l>area_center(Result,Pred,_,_)</l>
 <l>area_center(GTgray,GTtotal,_,_)</l>
 <l>area_center(Inter,TP,_,_)</l>
@@ -66,8 +82,8 @@
 <l>endif</l>
 <l>F1_list[i]:=F1</l>
 <l>endfor</l>
-<l>write_tuple(IoU_list,'./result/iou_EdgeDetec.txt')</l>
-<l>write_tuple(F1_list,'./result/f1_EdgeDetec.txt')</l>
+<l>write_tuple(IoU_list,'./result/iou_ThreshSeg.txt')</l>
+<l>write_tuple(F1_list,'./result/f1_ThreshSeg.txt')</l>
 </body>
 <docu id="main">
 <parameters/>
